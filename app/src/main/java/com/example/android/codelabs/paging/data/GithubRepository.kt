@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.asFlow
 import retrofit2.HttpException
 import java.io.IOException
 
-// GitHub page API is 1 based: https://developer.github.com/v3/#pagination
-private const val GITHUB_STARTING_PAGE_INDEX = 1
 
 /**
  * Repository class that works with local and remote data sources.
@@ -46,7 +44,7 @@ class GithubRepository(private val service: GithubService) {
     private val searchResults = ConflatedBroadcastChannel<RepoSearchResult>()
 
     // keep the last requested page. When the request is successful, increment the page number.
-    private var lastRequestedPage = GITHUB_STARTING_PAGE_INDEX
+    private var lastRequestedPage = 1
 
     // avoid triggering multiple requests in the same time
     private var isRequestInProgress = false
