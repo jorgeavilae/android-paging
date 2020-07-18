@@ -17,12 +17,12 @@
 package com.example.android.codelabs.paging.ui
 
 import androidx.lifecycle.*
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.example.android.codelabs.paging.data.GithubRepository
-import com.example.android.codelabs.paging.model.RepoSearchResult
-import kotlinx.coroutines.Dispatchers
+import com.example.android.codelabs.paging.model.Repo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
 
 /**
  * ViewModel for the [SearchRepositoriesActivity] screen.
@@ -30,34 +30,22 @@ import kotlinx.coroutines.launch
  */
 @ExperimentalCoroutinesApi
 class SearchRepositoriesViewModel(private val repository: GithubRepository) : ViewModel() {
-
-    companion object {
-        private const val VISIBLE_THRESHOLD = 5
-    }
-
-    private val queryLiveData = MutableLiveData<String>()
-    val repoResult: LiveData<RepoSearchResult> = queryLiveData.switchMap { queryString ->
-        liveData {
-            val repos = repository.getSearchResultStream(queryString).asLiveData(Dispatchers.Main)
-            emitSource(repos)
-        }
-    }
+    private var currentQueryValue: String? = null
+    private var currentSearchResult: Flow<PagingData<Repo>>? = null
 
     /**
      * Search a repository based on a query string.
      */
-    fun searchRepo(queryString: String) {
-        queryLiveData.postValue(queryString)
-    }
-
-    fun listScrolled(visibleItemCount: Int, lastVisibleItemPosition: Int, totalItemCount: Int) {
-        if (visibleItemCount + lastVisibleItemPosition + VISIBLE_THRESHOLD >= totalItemCount) {
-            val immutableQuery = queryLiveData.value
-            if (immutableQuery != null) {
-                viewModelScope.launch {
-                    repository.requestMore(immutableQuery)
-                }
-            }
+    fun searchRepo(queryString: String): Flow<PagingData<Repo>> {
+        val lastResult = currentSearchResult
+        if (queryString == currentQueryValue && lastResult != null) {
+            return lastResult
         }
+
+        currentQueryValue = queryString
+        val newResult : Flow<PagingData<Repo>> = repository.getSearchResultStream(queryString)
+                .cachedIn(viewModelScope)
+        currentSearchResult = newResult
+        return newResult
     }
 }
